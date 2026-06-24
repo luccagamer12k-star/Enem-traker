@@ -1,0 +1,982 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ENEM Tracker</title>
+<style>
+  :root {
+    --bg: #f6f7fb; --card: #ffffff; --text: #0f172a; --muted: #64748b;
+    --border: #e6e9f2; --soft: #f1f3fa;
+    --primary: #6d4aff; --primary-2: #4f46e5; --info: #3b82f6;
+    --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+    --ring: rgba(109,74,255,.35);
+  }
+  body.dark {
+    --bg: #0b1020; --card: #131a2e; --text: #e8edf6; --muted: #94a3b8;
+    --border: #243049; --soft: #1a2236;
+    --primary: #8b78ff; --primary-2: #7c6bff; --info: #60a5fa;
+    --success: #34d399; --warning: #fbbf24; --danger: #f87171;
+    --ring: rgba(139,120,255,.4);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    transition: background-color .25s ease, color .25s ease;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+
+  header.top {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: saturate(180%) blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: env(safe-area-inset-top) 0 0;
+  }
+  header.top::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+    background: linear-gradient(90deg, var(--info), var(--primary), var(--success)); opacity: .65; }
+  .top-row { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -.02em; font-size: 18px; }
+  .logo { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff;
+    background: linear-gradient(135deg, var(--info), var(--primary) 55%, var(--success)); font-size: 16px; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); font-size: 18px; display: grid; place-items: center; cursor: pointer; }
+  .hdr-timer { background: color-mix(in srgb,var(--primary) 14%,transparent); color: var(--primary);
+    border: 1px solid color-mix(in srgb,var(--primary) 30%,var(--border)); border-radius: 999px; padding: 7px 12px;
+    font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; cursor: pointer; }
+
+  #app { will-change: opacity, transform; }
+  #app.fade { animation: fadein .28s ease both; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  h1.page { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin: 18px 0 2px; }
+  p.sub { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+
+  .grid { display: grid; gap: 12px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+  .card.tight { padding: 14px; }
+  .metric .label { color: var(--muted); font-size: 12.5px; margin: 0 0 4px; }
+  .metric .value { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+  .metric .hint { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .metric .ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-size: 18px; flex: 0 0 auto; }
+
+  .row { display: flex; align-items: center; gap: 12px; }
+  .between { justify-content: space-between; }
+
+  .section-title { font-size: 16px; font-weight: 700; margin: 22px 0 10px; }
+
+  label.field { display: block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+  .input, .select, textarea {
+    width: 100%; border: 1px solid var(--border); background: var(--card); color: var(--text);
+    border-radius: 11px; padding: 11px 12px; font-size: 16px; font-family: inherit; outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .input:focus, .select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--ring); }
+  .readonly { background: var(--soft); color: var(--muted); }
+  .form-grid { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+  .form-grid .full { grid-column: 1 / -1; }
+
+  .btn { appearance: none; border: 1px solid transparent; border-radius: 12px; padding: 12px 16px;
+    font-size: 15px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+    transition: transform .08s ease, background-color .15s ease; }
+  .btn:active { transform: scale(.98); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:active { background: var(--primary-2); }
+  .btn-ghost { background: var(--card); color: var(--text); border-color: var(--border); }
+  .btn-danger { background: var(--card); color: var(--danger); border: 1px solid var(--border); }
+  .btn-block { width: 100%; }
+
+  .pill { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .pill-good { background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
+  .pill-warn { background: color-mix(in srgb, var(--warning) 18%, transparent); color: var(--warning); }
+  .pill-bad  { background: color-mix(in srgb, var(--danger) 16%, transparent);  color: var(--danger); }
+  .pill-muted{ background: var(--soft); color: var(--muted); }
+  .pill-info { background: color-mix(in srgb, var(--info) 16%, transparent); color: var(--info); }
+
+  .trend { font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 999px; vertical-align: middle; white-space: nowrap; }
+  .trend.up { background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
+  .trend.down { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }
+  .trend.flat { background: var(--soft); color: var(--muted); }
+
+  .bar { height: 9px; border-radius: 999px; background: var(--soft); overflow: hidden; }
+  .bar > span { display: block; height: 100%; border-radius: 999px; background: var(--primary); transition: width .35s ease; }
+
+  .list-item { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .list-item:last-child { border-bottom: 0; }
+  .li-main { min-width: 0; }
+  .li-title { font-weight: 600; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .li-meta { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+  .iconbtn { background: none; border: 0; color: var(--muted); font-size: 16px; cursor: pointer;
+    width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; }
+  .iconbtn:active { background: var(--soft); }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; }
+  .filters .select, .filters .input { flex: 1 1 140px; min-width: 0; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--border); background: var(--card); color: var(--muted);
+    border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .12s ease; }
+  .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  .dots { display: flex; gap: 6px; justify-content: space-between; }
+  .dot { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .dot .d { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700;
+    background: var(--soft); color: var(--muted); }
+  .dot .d.on { background: var(--success); color: #fff; }
+  .dot .d.today { box-shadow: 0 0 0 2px var(--ring); }
+  .dot .dl { font-size: 10px; color: var(--muted); }
+
+  .empty { text-align: center; padding: 34px 16px; color: var(--muted); border: 1px dashed var(--border); border-radius: 16px; }
+  .empty .big { font-size: 30px; }
+  .empty h3 { color: var(--text); margin: 10px 0 4px; font-size: 16px; }
+
+  .chart { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding-top: 8px; }
+  .chart .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+  .chart .stick { width: 70%; max-width: 26px; border-radius: 7px 7px 3px 3px;
+    background: linear-gradient(180deg, var(--primary), var(--primary-2)); min-height: 3px; transition: height .3s ease; }
+  .chart .clabel { font-size: 10.5px; color: var(--muted); }
+  .chart .cval { font-size: 10.5px; color: var(--text); font-weight: 700; }
+
+  .comp-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .comp { text-align: center; }
+  .comp .cv { font-weight: 800; font-size: 18px; }
+  .comp .ck { color: var(--muted); font-size: 11px; }
+
+  .editing { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); box-shadow: 0 0 0 3px var(--ring); }
+  .edit-flag { background: color-mix(in srgb,var(--primary) 12%,var(--card)); border:1px solid color-mix(in srgb,var(--primary) 30%,var(--border));
+    color: var(--primary); font-weight:700; font-size:13px; border-radius:11px; padding:8px 12px; margin-bottom:12px; }
+
+  nav.tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter: blur(10px); border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tabs-inner { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+  .tab { background: none; border: 0; cursor: pointer; color: var(--muted); position: relative;
+    padding: 10px 0 8px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 600; transition: color .15s ease; }
+  .tab .ti { font-size: 20px; line-height: 1; }
+  .tab.active { color: var(--primary); }
+  .tab.active::before { content: ""; position: absolute; top: 0; width: 26px; height: 3px; border-radius: 0 0 4px 4px; background: var(--primary); }
+
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom));
+    background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    z-index: 50; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; max-width: 92%; text-align: center;
+    display: flex; align-items: center; gap: 6px; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); pointer-events: auto; }
+  .toast button { background: none; border: 0; color: #c4b5fd; font-weight: 800; text-decoration: underline; font-size: 13px; cursor: pointer; padding: 2px 4px; }
+
+  .hidden { display: none !important; }
+  .muted { color: var(--muted); }
+  .center { text-align: center; }
+  .mt8 { margin-top: 8px; } .mt12 { margin-top: 12px; } .mt16 { margin-top: 16px; }
+  .danger-zone { border-color: color-mix(in srgb, var(--danger) 30%, var(--border)); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <div class="brand"><span class="logo">🎓</span> ENEM Tracker</div>
+      <div class="row" style="gap:8px">
+        <button id="hdrTimer" class="hdr-timer hidden" onclick="setTab('questoes')">⏱ 00:00</button>
+        <button class="icon-btn" id="themeBtn" title="Tema">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" id="app"></main>
+
+  <nav class="tabs">
+    <div class="tabs-inner">
+      <button class="tab active" data-tab="painel"><span class="ti">📊</span>Painel</button>
+      <button class="tab" data-tab="questoes"><span class="ti">✅</span>Questões</button>
+      <button class="tab" data-tab="redacoes"><span class="ti">✍️</span>Redações</button>
+      <button class="tab" data-tab="horas"><span class="ti">⏱️</span>Horas</button>
+      <button class="tab" data-tab="metas"><span class="ti">🎯</span>Metas</button>
+    </div>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ----------------------------- dados / domínio ----------------------------- */
+const KEY = "enem-tracker:data:v1";
+
+const AREAS = [
+  { v: "linguagens", n: "Linguagens" },
+  { v: "matematica", n: "Matemática" },
+  { v: "natureza", n: "Ciências da Natureza" },
+  { v: "humanas", n: "Ciências Humanas" },
+];
+const SUBJECTS = [
+  { v: "matematica", n: "Matemática", a: "matematica" },
+  { v: "fisica", n: "Física", a: "natureza" },
+  { v: "quimica", n: "Química", a: "natureza" },
+  { v: "biologia", n: "Biologia", a: "natureza" },
+  { v: "historia", n: "História", a: "humanas" },
+  { v: "geografia", n: "Geografia", a: "humanas" },
+  { v: "filosofia", n: "Filosofia", a: "humanas" },
+  { v: "sociologia", n: "Sociologia", a: "humanas" },
+  { v: "portugues", n: "Português", a: "linguagens" },
+  { v: "literatura", n: "Literatura", a: "linguagens" },
+  { v: "ingles", n: "Inglês", a: "linguagens" },
+  { v: "espanhol", n: "Espanhol", a: "linguagens" },
+  { v: "artes", n: "Artes", a: "linguagens" },
+  { v: "edfisica", n: "Educação Física", a: "linguagens" },
+  { v: "tecnologias", n: "Tecnologias", a: "linguagens" },
+];
+const SUBJ_NAME = Object.fromEntries(SUBJECTS.map(s => [s.v, s.n]));
+const DIFFS = [{ v: "facil", n: "Fácil" }, { v: "medio", n: "Médio" }, { v: "dificil", n: "Difícil" }];
+const SOURCES = [
+  { v: "enem", n: "ENEM antigo" }, { v: "simulado", n: "Simulado" }, { v: "apostila", n: "Apostila" },
+  { v: "plataforma", n: "Plataforma" }, { v: "proprias", n: "Questões próprias" },
+];
+const SOURCE_NAME = Object.fromEntries(SOURCES.map(s => [s.v, s.n]));
+
+/* --------------------------- armazenamento local --------------------------- */
+// Funciona em 3 cenários: dentro do Claude (window.storage), em site hospedado
+// (localStorage do navegador) e, em último caso, só em memória nesta sessão.
+function defaults() { return { entries: [], essays: [], weeklyGoal: 0, weeklyHoursGoal: 0, totalHoursGoal: 0, theme: "light", timer: { running: false, startedAt: null, accumulatedMs: 0 }, backupBase: 0 }; }
+let state = defaults();
+let editEntryId = null;
+let editEssayId = null;
+let qf = { subject: "todos", period: "all", q: "" };
+
+const cloudStore = typeof window !== "undefined" && window.storage && typeof window.storage.get === "function";
+let localOK = false;
+try { if (typeof localStorage !== "undefined") { const k = "__enem_test__"; localStorage.setItem(k, "1"); localStorage.removeItem(k); localOK = true; } } catch (e) { localOK = false; }
+const hasStore = cloudStore || localOK;
+
+async function loadData() {
+  try {
+    if (cloudStore) { const res = await window.storage.get(KEY); if (res && res.value) state = Object.assign(defaults(), JSON.parse(res.value)); }
+    else if (localOK) { const v = localStorage.getItem(KEY); if (v) state = Object.assign(defaults(), JSON.parse(v)); }
+  } catch (e) {}
+}
+async function persist() {
+  try {
+    if (cloudStore) await window.storage.set(KEY, JSON.stringify(state));
+    else if (localOK) localStorage.setItem(KEY, JSON.stringify(state));
+  } catch (e) {}
+}
+
+/* --------------------------------- utils ----------------------------------- */
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const todayISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+function isoDaysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+function fmtBR(iso) { const p = (iso || "").slice(0, 10).split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso; }
+function fmtMin(m) { m = +m || 0; if (m <= 0) return "0min"; const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h}h${String(r).padStart(2,"0")}` : `${h}h`) : `${r}min`; }
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const attr = (s) => esc(s).replace(/'/g, "&#39;");
+const taxa = (c, t) => t > 0 ? Math.round((c / t) * 1000) / 10 : 0;
+function rateClass(t) { return t >= 70 ? "pill-good" : t >= 50 ? "pill-warn" : "pill-bad"; }
+
+function startOfWeekISO() {
+  const d = new Date(); const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day); d.setHours(0,0,0,0);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+function prevWeekRange() {
+  const s = startOfWeekISO(); const base = new Date(s + "T00:00:00");
+  const end = new Date(base); end.setDate(end.getDate() - 1);
+  const start = new Date(base); start.setDate(start.getDate() - 7);
+  const iso = x => new Date(x.getTime() - x.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  return { start: iso(start), end: iso(end) };
+}
+const isThisWeek = (iso) => (iso || "").slice(0,10) >= startOfWeekISO();
+const isToday = (iso) => (iso || "").slice(0,10) === todayISO();
+function isThisMonth(iso) { return (iso || "").slice(0,7) === todayISO().slice(0,7); }
+
+function streak(entries) {
+  if (!entries.length) return 0;
+  const days = new Set(entries.map(e => e.date.slice(0,10)));
+  let s = 0; const d = new Date();
+  const k = x => new Date(x.getTime() - x.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  if (!days.has(k(d))) { d.setDate(d.getDate()-1); if (!days.has(k(d))) return 0; }
+  while (days.has(k(d))) { s++; d.setDate(d.getDate()-1); }
+  return s;
+}
+function bySubject(entries) {
+  const m = {};
+  entries.forEach(e => { const x = m[e.subject] || (m[e.subject] = { total:0, correct:0 }); x.total += +e.total; x.correct += +e.correct; });
+  return Object.keys(m).map(k => ({ subject:k, name: SUBJ_NAME[k]||k, total:m[k].total, correct:m[k].correct, taxa: taxa(m[k].correct, m[k].total) }))
+    .sort((a,b)=> b.taxa - a.taxa);
+}
+function timeBySubject(entries) {
+  const m = {};
+  entries.forEach(e => { m[e.subject] = (m[e.subject]||0) + (+e.minutes||0); });
+  return Object.keys(m).filter(k=>m[k]>0).map(k=>({ subject:k, name:SUBJ_NAME[k]||k, min:m[k] })).sort((a,b)=>b.min-a.min);
+}
+function last7(entries) {
+  const out = [];
+  for (let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i);
+    const key=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    const tot=entries.filter(e=>e.date.slice(0,10)===key).reduce((s,e)=>s+(+e.total),0);
+    out.push({ label: `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`, total: tot }); }
+  return out;
+}
+function trendChip(cur, prev) {
+  if (!(prev > 0)) return "";
+  const diff = cur - prev;
+  if (diff === 0) return `<span class="trend flat">0%</span>`;
+  const pct = Math.round(Math.abs(diff) / prev * 100);
+  return `<span class="trend ${diff>0?'up':'down'}">${diff>0?'▲':'▼'} ${pct}%</span>`;
+}
+
+/* --------------------------------- toast ----------------------------------- */
+let toastTimer;
+function toast(msg, actionLabel, actionFn) {
+  const el = document.getElementById("toast");
+  el.innerHTML = `<span>${esc(msg)}</span>` + (actionLabel ? `<button id="toastAct">${esc(actionLabel)}</button>` : "");
+  el.classList.add("show");
+  if (actionLabel && actionFn) {
+    const b = document.getElementById("toastAct");
+    if (b) b.onclick = () => { el.classList.remove("show"); clearTimeout(toastTimer); actionFn(); };
+  }
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), actionLabel ? 6000 : 2400);
+}
+
+/* -------------------------------- cronômetro ------------------------------- */
+function fmtClock(ms){ const s=Math.max(0,Math.floor(ms/1000)); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  const mm=String(m).padStart(2,"0"), ss=String(sec).padStart(2,"0"); return h>0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`; }
+function timerElapsedMs(){ const t=state.timer||{}; return (t.accumulatedMs||0) + (t.running && t.startedAt ? Date.now()-t.startedAt : 0); }
+function timerCardHtml(){
+  const ms=timerElapsedMs(); const running=!!(state.timer&&state.timer.running); const has=ms>=1000;
+  return `<div class="row between">
+      <div><div class="li-meta" style="margin:0">Cronômetro de estudo</div>
+        <div id="timerDisplay" style="font-size:30px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums">${fmtClock(ms)}</div></div>
+      <div>${running
+        ? `<button class="btn btn-ghost" onclick="timerPause()">⏸ Pausar</button>`
+        : `<button class="btn btn-primary" onclick="timerStart()">▶ ${has?'Continuar':'Iniciar'}</button>`}</div>
+    </div>
+    <div class="row mt12" style="gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="timerUse()">Usar no campo Tempo</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="timerReset()">Zerar</button>
+    </div>
+    ${running?`<p class="li-meta" style="margin:10px 0 0">Rodando — pode trocar de aba que ele continua contando.</p>`:""}`;
+}
+function renderTimerCard(){ const c=document.getElementById("timerCard"); if (c) c.innerHTML = timerCardHtml(); }
+function tickTimer(){
+  const running=!!(state.timer&&state.timer.running);
+  const disp=document.getElementById("timerDisplay"); if (disp) disp.textContent = fmtClock(timerElapsedMs());
+  const hdr=document.getElementById("hdrTimer"); if (hdr){ hdr.classList.toggle("hidden", !running); if (running) hdr.textContent = "⏱ " + fmtClock(timerElapsedMs()); }
+}
+async function timerStart(){ if(!state.timer) state.timer={running:false,startedAt:null,accumulatedMs:0};
+  if(!state.timer.running){ state.timer.running=true; state.timer.startedAt=Date.now(); await persist(); renderTimerCard(); tickTimer(); } }
+async function timerPause(){ const t=state.timer; if(t&&t.running){ t.accumulatedMs=(t.accumulatedMs||0)+(Date.now()-t.startedAt); t.running=false; t.startedAt=null; await persist(); renderTimerCard(); tickTimer(); } }
+async function timerReset(){ state.timer={running:false,startedAt:null,accumulatedMs:0}; await persist(); renderTimerCard(); tickTimer(); }
+function timerUse(){ const min=Math.round(timerElapsedMs()/60000); const el=document.getElementById("q_min");
+  if (el){ el.value=min; toast(`Tempo aplicado: ${min} min`); } else { toast("Abra o formulário de questões"); } }
+window.timerStart=timerStart; window.timerPause=timerPause; window.timerReset=timerReset; window.timerUse=timerUse;
+
+/* -------------------------------- navegação -------------------------------- */
+let current = "painel";
+function setTab(tab) {
+  current = tab; editEntryId = null; editEssayId = null;
+  qf = { subject: "todos", period: "all", q: "" };
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  render(); window.scrollTo({ top: 0 });
+}
+window.setTab = setTab;
+
+/* --------------------------------- render ---------------------------------- */
+function render() {
+  const app = document.getElementById("app");
+  if (current === "painel") app.innerHTML = viewPainel();
+  else if (current === "questoes") app.innerHTML = viewQuestoes();
+  else if (current === "redacoes") app.innerHTML = viewRedacoes();
+  else if (current === "horas") app.innerHTML = viewHoras();
+  else if (current === "metas") app.innerHTML = viewMetas();
+  // re-dispara a animação de entrada
+  app.classList.remove("fade"); void app.offsetWidth; app.classList.add("fade");
+  postRender();
+}
+function postRender() {
+  wireSubjectArea();
+  if (current === "questoes" && state.entries.length) applyQuestionFilters();
+}
+function metricCard(label, value, ico, bg, color, hint, trend) {
+  return `<div class="card metric tight"><div class="row">
+    <div class="ico" style="background:${bg};color:${color}">${ico}</div>
+    <div style="min-width:0"><p class="label">${label}</p>
+    <div class="value">${value} ${trend||""}</div>${hint?`<div class="hint">${hint}</div>`:""}</div>
+  </div></div>`;
+}
+
+/* ---- Painel ---- */
+function viewPainel() {
+  const e = state.entries;
+  if (!e.length && !state.essays.length) {
+    return `<h1 class="page">Painel</h1><p class="sub">Sua evolução de estudos em um só lugar.</p>
+      <div class="empty"><div class="big">📈</div><h3>Comece registrando questões</h3>
+      <p>Toque em <b>Questões</b> e adicione seu primeiro bloco para os números aparecerem aqui.</p>
+      <div class="mt16"><button class="btn btn-primary" onclick="setTab('questoes')">Registrar questões</button></div>
+      <div class="mt12"><button class="btn btn-ghost btn-block" onclick="seedDemo()">Carregar dados de exemplo</button></div></div>`;
+  }
+  const qToday = e.filter(x=>isToday(x.date)).reduce((s,x)=>s+(+x.total),0);
+  const week = e.filter(x=>isThisWeek(x.date));
+  const qWeek = week.reduce((s,x)=>s+(+x.total),0);
+  const lw = prevWeekRange();
+  const qLastWeek = e.filter(x=> x.date.slice(0,10)>=lw.start && x.date.slice(0,10)<=lw.end).reduce((s,x)=>s+(+x.total),0);
+  const totalC = e.reduce((s,x)=>s+(+x.correct),0), totalT = e.reduce((s,x)=>s+(+x.total),0);
+  const overall = taxa(totalC, totalT);
+  const minWeek = week.reduce((s,x)=>s+(+x.minutes||0),0);
+  const st = streak(e);
+  const monthEssays = state.essays.filter(x=>isThisMonth(x.date)).length;
+
+  const tmap = {}; e.forEach(x=>{ tmap[x.subject]=(tmap[x.subject]||0)+(+x.minutes||0); });
+  const subs = bySubject(e);
+  const relevant = subs.filter(s=>s.total>=5);
+  const best = relevant[0], worst = relevant.length>1 ? relevant[relevant.length-1] : null;
+  const seven = last7(e); const max = Math.max(1, ...seven.map(d=>d.total));
+
+  // bolinhas de constância (últimos 7 dias)
+  const dotDays = [];
+  for (let i=6;i>=0;i--){ const key = isoDaysAgo(i); const d = new Date(); d.setDate(d.getDate()-i);
+    dotDays.push({ on: e.some(x=>x.date.slice(0,10)===key), today: i===0, wd: ["D","S","T","Q","Q","S","S"][d.getDay()] }); }
+
+  let suggestion = "Seu desempenho está equilibrado. Mantenha a constância e aumente o volume aos poucos.";
+  if (worst && worst.taxa < 60) suggestion = `Você tem ${worst.taxa}% de acerto em ${worst.name}. Priorize essa matéria nos próximos 3 dias.`;
+  else if (best) suggestion = `Boa! Seu melhor desempenho é em ${best.name} (${best.taxa}%). Continue puxando o volume nas matérias mais fracas.`;
+
+  return `<h1 class="page">Painel</h1><p class="sub">Sua evolução de estudos em um só lugar.</p>
+    <div class="grid g2">
+      ${metricCard("Questões hoje", qToday, "✅", "color-mix(in srgb,var(--primary) 14%,transparent)", "var(--primary)")}
+      ${metricCard("Na semana", qWeek, "🗓️", "color-mix(in srgb,var(--info) 14%,transparent)", "var(--info)", "vs. semana passada", trendChip(qWeek, qLastWeek))}
+      ${metricCard("Taxa de acerto", overall + "%", "🎯", "color-mix(in srgb,var(--success) 14%,transparent)", "var(--success)")}
+      ${metricCard("Sequência", st + (st===1?" dia":" dias"), "🔥", "color-mix(in srgb,var(--warning) 16%,transparent)", "var(--warning)", "estudando sem parar")}
+      ${metricCard("Tempo (semana)", fmtMin(minWeek), "⏱️", "color-mix(in srgb,var(--warning) 16%,transparent)", "var(--warning)")}
+      ${metricCard("Redações no mês", monthEssays, "✍️", "color-mix(in srgb,var(--primary) 14%,transparent)", "var(--primary)")}
+    </div>
+
+    <div class="section-title">Constância (últimos 7 dias)</div>
+    <div class="card">
+      <div class="dots">
+        ${dotDays.map(d=>`<div class="dot"><div class="d ${d.on?'on':''} ${d.today?'today':''}">${d.on?'✓':''}</div><div class="dl">${d.wd}</div></div>`).join("")}
+      </div>
+    </div>
+
+    <div class="section-title">Questões nos últimos 7 dias</div>
+    <div class="card">
+      <div class="chart">
+        ${seven.map(d=>`<div class="col"><div class="cval">${d.total||""}</div>
+          <div class="stick" style="height:${d.total? Math.max(4, Math.round(d.total/max*100)) : 1}%"></div>
+          <div class="clabel">${d.label}</div></div>`).join("")}
+      </div>
+    </div>
+
+    ${subs.length ? `<div class="section-title">Desempenho por matéria</div>
+    <div class="card">
+      ${subs.slice(0,8).map(s=>`<div style="margin:10px 0">
+        <div class="row between" style="margin-bottom:6px"><span style="font-weight:600;font-size:14px">${s.name}</span>
+        <span class="pill ${rateClass(s.taxa)}">${s.taxa}%</span></div>
+        <div class="bar"><span style="width:${s.taxa}%;background:${s.taxa>=70?'var(--success)':s.taxa>=50?'var(--warning)':'var(--danger)'}"></span></div>
+        <div class="li-meta" style="margin-top:4px">${s.correct}/${s.total} questões · ${fmtMin(tmap[s.subject]||0)}</div>
+      </div>`).join("")}
+    </div>` : ""}
+
+    <div class="section-title">Diagnóstico</div>
+    <div class="card">
+      <div class="list-item"><span class="muted">Melhor matéria</span><span class="pill pill-good">${best? best.name+" · "+best.taxa+"%" : "—"}</span></div>
+      <div class="list-item"><span class="muted">Pior matéria</span><span class="pill pill-bad">${worst? worst.name+" · "+worst.taxa+"%" : "—"}</span></div>
+    </div>
+    <div class="card mt12" style="border-color:color-mix(in srgb,var(--primary) 30%,var(--border));background:color-mix(in srgb,var(--primary) 5%,var(--card))">
+      <div class="row" style="gap:8px;align-items:flex-start"><span style="font-size:18px">🎯</span>
+      <div><b>Sugestão</b><p style="margin:4px 0 0;font-size:14px;line-height:1.5">${suggestion}</p></div></div>
+    </div>`;
+}
+
+/* ---- Questões ---- */
+function entryRow(it) {
+  const t = taxa(it.correct, it.total);
+  return `<div class="list-item"><div class="li-main">
+    <div class="li-title">${esc(SUBJ_NAME[it.subject]||it.subject)} ${it.topic?`· <span class="muted">${esc(it.topic)}</span>`:""}</div>
+    <div class="li-meta">${fmtBR(it.date)} · ${it.correct}/${it.total} · ${fmtMin(it.minutes)}${it.source?` · ${SOURCE_NAME[it.source]||it.source}`:""}</div></div>
+    <div class="actions"><span class="pill ${rateClass(t)}" style="margin-right:4px">${t}%</span>
+    <button class="iconbtn" onclick="editEntry('${it.id}')" aria-label="Editar">✏️</button>
+    <button class="iconbtn" onclick="delEntry('${it.id}')" aria-label="Excluir">🗑️</button></div></div>`;
+}
+function applyQuestionFilters() {
+  const list = document.getElementById("qlist"); if (!list) return;
+  let rows = [...state.entries].sort((a,b)=> (b.date+b.id).localeCompare(a.date+a.id));
+  if (qf.subject !== "todos") rows = rows.filter(r=>r.subject===qf.subject);
+  if (qf.period !== "all") { const cut = isoDaysAgo(qf.period==="7"?6:29); rows = rows.filter(r=>r.date.slice(0,10) >= cut); }
+  if (qf.q.trim()) { const q = qf.q.trim().toLowerCase(); rows = rows.filter(r=>((r.topic||"")+" "+(SUBJ_NAME[r.subject]||"")).toLowerCase().includes(q)); }
+  const cnt = document.getElementById("qcount"); if (cnt) cnt.textContent = `· ${rows.length}`;
+  ["all","7","30"].forEach(p=>{ const c=document.getElementById("chip-"+p); if (c) c.classList.toggle("active", qf.period===p); });
+  list.innerHTML = rows.length ? rows.map(entryRow).join("")
+    : `<div class="empty"><div class="big">🔍</div><h3>Nada encontrado</h3><p>Tente ajustar os filtros acima.</p></div>`;
+}
+function qSetSubject(v){ qf.subject = v; applyQuestionFilters(); }
+function qSetPeriod(p){ qf.period = p; applyQuestionFilters(); }
+function qSetSearch(v){ qf.q = v; applyQuestionFilters(); }
+window.qSetSubject = qSetSubject; window.qSetPeriod = qSetPeriod; window.qSetSearch = qSetSearch;
+
+function viewQuestoes() {
+  const ed = editEntryId ? state.entries.find(e=>e.id===editEntryId) : null;
+  const sel = (v) => v || "";
+  const opts = (arr, s) => arr.map(o=>`<option value="${o.v}" ${o.v===s?"selected":""}>${o.n}</option>`).join("");
+  const wrong0 = ed ? Math.max(0, (+ed.total||0)-(+ed.correct||0)) : 0;
+  const hasRows = state.entries.length > 0;
+  const subjFilterOpts = `<option value="todos" ${qf.subject==="todos"?"selected":""}>Todas as matérias</option>` +
+    SUBJECTS.map(s=>`<option value="${s.v}" ${qf.subject===s.v?"selected":""}>${s.n}</option>`).join("");
+
+  return `<h1 class="page">Questões</h1><p class="sub">${ed? "Editando um registro existente." : "Registre um bloco; erros e taxa saem automáticos."}</p>
+    ${ed? `<div class="edit-flag">✏️ Editando o registro de ${esc(SUBJ_NAME[ed.subject]||ed.subject)} (${fmtBR(ed.date)}).</div>`:""}
+    <div class="card" id="timerCard" style="margin-bottom:16px">${timerCardHtml()}</div>
+    <div class="card ${ed?'editing':''}">
+      <div class="form-grid">
+        <div><label class="field">Data</label><input class="input" type="date" id="q_date" value="${ed? ed.date : todayISO()}"></div>
+        <div><label class="field">Área</label><select class="select" id="q_area"><option value="">Selecione</option>${opts(AREAS, sel(ed&&ed.area))}</select></div>
+        <div><label class="field">Matéria</label><select class="select" id="q_subject"><option value="">Selecione</option>${opts(SUBJECTS, sel(ed&&ed.subject))}</select></div>
+        <div><label class="field">Fonte</label><select class="select" id="q_source"><option value="">Opcional</option>${opts(SOURCES, sel(ed&&ed.source))}</select></div>
+        <div class="full"><label class="field">Assunto (opcional)</label><input class="input" id="q_topic" placeholder="Ex.: Funções" value="${ed? attr(ed.topic) : ""}"></div>
+        <div><label class="field">Questões</label><input class="input" type="number" inputmode="numeric" id="q_total" min="0" value="${ed? ed.total : ""}" oninput="calcWrong()"></div>
+        <div><label class="field">Acertos</label><input class="input" type="number" inputmode="numeric" id="q_correct" min="0" value="${ed? ed.correct : ""}" oninput="calcWrong()"></div>
+        <div><label class="field">Erros (auto)</label><input class="input readonly" id="q_wrong" value="${wrong0}" readonly></div>
+        <div><label class="field">Tempo (min)</label><input class="input" type="number" inputmode="numeric" id="q_min" min="0" value="${ed? (ed.minutes||0) : ""}"></div>
+        <div><label class="field">Nível</label><select class="select" id="q_diff"><option value="">Opcional</option>${opts(DIFFS, sel(ed&&ed.difficulty))}</select></div>
+      </div>
+      <div class="mt16">
+        ${ed? `<button class="btn btn-primary btn-block" onclick="addEntry()">Salvar alterações</button>
+               <div class="mt12"></div><button class="btn btn-ghost btn-block" onclick="cancelEdit()">Cancelar edição</button>`
+            : `<button class="btn btn-primary btn-block" onclick="addEntry()">Registrar questões</button>`}
+      </div>
+    </div>
+
+    <div class="section-title">Histórico <span id="qcount" class="muted" style="font-weight:600;font-size:13px"></span></div>
+    ${hasRows ? `
+    <div class="card" style="margin-bottom:12px">
+      <div class="filters">
+        <select class="select" onchange="qSetSubject(this.value)">${subjFilterOpts}</select>
+        <input class="input" id="fSearch" placeholder="Buscar assunto…" value="${attr(qf.q)}" oninput="qSetSearch(this.value)">
+      </div>
+      <div class="chips mt12">
+        <button id="chip-all" class="chip" onclick="qSetPeriod('all')">Tudo</button>
+        <button id="chip-7" class="chip" onclick="qSetPeriod('7')">7 dias</button>
+        <button id="chip-30" class="chip" onclick="qSetPeriod('30')">30 dias</button>
+      </div>
+    </div>
+    <div class="card"><div id="qlist"></div></div>`
+    : `<div class="empty"><div class="big">📝</div><h3>Nenhum registro ainda</h3><p>Adicione seu primeiro bloco acima.</p>
+      <div class="mt12"><button class="btn btn-ghost" onclick="seedDemo()">Carregar dados de exemplo</button></div></div>`}`;
+}
+
+/* ---- Redações ---- */
+function viewRedacoes() {
+  const ed = editEssayId ? state.essays.find(e=>e.id===editEssayId) : null;
+  const es = [...state.essays].sort((a,b)=> (b.date+b.id).localeCompare(a.date+a.id));
+  const scored = es.filter(e=>e.total!=null);
+  const avg = scored.length ? Math.round(scored.reduce((s,e)=>s+(+e.total),0)/scored.length) : 0;
+  const best = es.reduce((m,e)=>Math.max(m, +e.total||0), 0);
+  const compAvg = [1,2,3,4,5].map(i=>{ const vals = es.map(e=>e["c"+i]).filter(v=>v!=null&&v!=="").map(Number);
+    return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0; });
+  const weakIdx = compAvg.some(v=>v>0) ? compAvg.indexOf(Math.min(...compAvg.filter(v=>v>0))) : -1;
+  const initTotal = ed ? (ed.total||0) : 0;
+
+  return `<h1 class="page">Redações</h1><p class="sub">${ed? "Editando uma redação existente." : "Notas por competência e evolução."}</p>
+    <div class="grid g2">
+      ${metricCard("Média geral", avg||"—", "📊", "color-mix(in srgb,var(--primary) 14%,transparent)", "var(--primary)")}
+      ${metricCard("Melhor nota", best||"—", "🏆", "color-mix(in srgb,var(--success) 14%,transparent)", "var(--success)")}
+    </div>
+
+    ${es.length ? `<div class="section-title">Média por competência</div>
+    <div class="card"><div class="comp-grid">
+      ${compAvg.map((v,i)=>`<div class="comp"><div class="cv" style="color:${i===weakIdx?'var(--danger)':'var(--text)'}">${v||"—"}</div><div class="ck">C${i+1}</div></div>`).join("")}
+    </div>${weakIdx>=0?`<p class="li-meta mt12">Sua menor média é a Competência ${weakIdx+1}. ${weakIdx+1===3?"Treine repertório e organização dos argumentos.":"Foque exercícios específicos dessa competência."}</p>`:""}</div>`:""}
+
+    <div class="section-title">${ed? "Editar redação" : "Nova redação"}</div>
+    ${ed? `<div class="edit-flag">✏️ Editando: ${esc(ed.theme||"(sem tema)")} (${fmtBR(ed.date)}).</div>`:""}
+    <div class="card ${ed?'editing':''}">
+      <div class="form-grid">
+        <div><label class="field">Data</label><input class="input" type="date" id="r_date" value="${ed? ed.date : todayISO()}"></div>
+        <div><label class="field">Tema</label><input class="input" id="r_theme" placeholder="Tema" value="${ed? attr(ed.theme) : ""}"></div>
+      </div>
+      <label class="field mt12">Competências (0–200) — total soma automático</label>
+      <div class="comp-grid">
+        ${[1,2,3,4,5].map(i=>`<input class="input" style="padding:10px 6px;text-align:center" type="number" inputmode="numeric" id="r_c${i}" min="0" max="200" placeholder="C${i}" value="${ed&&ed['c'+i]!=null? ed['c'+i] : ""}" oninput="calcEssayTotal()">`).join("")}
+      </div>
+      <div class="row between mt12"><label class="field" style="margin:0">Nota total</label><b id="r_total_lbl" style="font-size:18px">${initTotal}</b></div>
+      <div class="mt16">
+        ${ed? `<button class="btn btn-primary btn-block" onclick="addEssay()">Salvar alterações</button>
+               <div class="mt12"></div><button class="btn btn-ghost btn-block" onclick="cancelEditEssay()">Cancelar edição</button>`
+            : `<button class="btn btn-primary btn-block" onclick="addEssay()">Registrar redação</button>`}
+      </div>
+    </div>
+
+    <div class="section-title">Histórico ${es.length?`· ${es.length}`:""}</div>
+    ${es.length ? `<div class="card">${es.map(it=>`<div class="list-item"><div class="li-main">
+      <div class="li-title">${esc(it.theme||"(sem tema)")}</div>
+      <div class="li-meta">${fmtBR(it.date)} · C: ${[1,2,3,4,5].map(i=>it["c"+i]??"–").join("/")}</div></div>
+      <div class="actions"><span class="pill ${ (it.total>=800?'pill-good':it.total>=600?'pill-warn':'pill-bad') }" style="margin-right:4px">${it.total??"—"}</span>
+      <button class="iconbtn" onclick="editEssay('${it.id}')" aria-label="Editar">✏️</button>
+      <button class="iconbtn" onclick="delEssay('${it.id}')" aria-label="Excluir">🗑️</button></div></div>`).join("")}</div>`
+      : `<div class="empty"><div class="big">✍️</div><h3>Nenhuma redação ainda</h3><p>Registre a primeira acima.</p></div>`}`;
+}
+
+/* ---- Banco de horas ---- */
+function viewHoras() {
+  const e = state.entries;
+  const totalMin = e.reduce((s,x)=>s+(+x.minutes||0),0);
+  const totalHours = Math.round(totalMin/60*10)/10;
+  const week = e.filter(x=>isThisWeek(x.date));
+  const minWeek = week.reduce((s,x)=>s+(+x.minutes||0),0);
+  const hoursWeek = Math.round(minWeek/60*10)/10;
+  const hGoal = +state.weeklyHoursGoal||0;
+  const hPct = hGoal>0 ? Math.min(100, Math.round(hoursWeek/hGoal*100)) : 0;
+  const totGoal = +state.totalHoursGoal||0;
+  const totPct = totGoal>0 ? Math.min(100, Math.round(totalHours/totGoal*100)) : 0;
+  const timeRows = timeBySubject(e); const maxMin = Math.max(1, ...timeRows.map(r=>r.min));
+  const seven = [];
+  for (let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i);
+    const key=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    const min = e.filter(x=>x.date.slice(0,10)===key).reduce((s,x)=>s+(+x.minutes||0),0);
+    seven.push({ label:`${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`, min }); }
+  const maxDay = Math.max(1, ...seven.map(d=>d.min));
+
+  return `<h1 class="page">Banco de horas</h1><p class="sub">Quanto você já estudou e o quanto falta para suas metas de tempo.</p>
+    <div class="grid g2">
+      ${metricCard("Total estudado", fmtMin(totalMin), "⏱️", "color-mix(in srgb,var(--info) 14%,transparent)", "var(--info)")}
+      ${metricCard("Nesta semana", fmtMin(minWeek), "🗓️", "color-mix(in srgb,var(--warning) 16%,transparent)", "var(--warning)")}
+    </div>
+
+    <div class="section-title">Metas de tempo</div>
+    <div class="card">
+      <label class="field">Meta de horas por semana</label>
+      <input class="input" type="number" inputmode="decimal" step="0.5" id="h_week" min="0" value="${hGoal||""}" placeholder="Ex.: 18">
+      <label class="field mt12">Meta total de horas (banco até a prova)</label>
+      <input class="input" type="number" inputmode="numeric" id="h_total" min="0" value="${totGoal||""}" placeholder="Ex.: 300">
+      <div class="mt16"><button class="btn btn-primary btn-block" onclick="saveHoras()">Salvar metas de tempo</button></div>
+    </div>
+
+    ${(hGoal>0||totGoal>0) ? `<div class="card mt12">
+      ${hGoal>0 ? `<div>
+        <div class="row between" style="margin-bottom:6px"><span style="font-weight:600;font-size:14px">Meta semanal</span><span class="muted">${hoursWeek}h / ${hGoal}h</span></div>
+        <div class="bar" style="height:12px"><span style="width:${hPct}%;background:${hPct>=100?'var(--success)':'var(--info)'}"></span></div>
+        <p style="margin:6px 0 0;font-weight:700;color:${hPct>=100?'var(--success)':'var(--muted)'}">${hPct}%${hPct>=100?" — batida! 🎉":""}</p>
+      </div>` : ""}
+      ${totGoal>0 ? `<div class="${hGoal>0?'mt16':''}">
+        <div class="row between" style="margin-bottom:6px"><span style="font-weight:600;font-size:14px">Banco total</span><span class="muted">${totalHours}h / ${totGoal}h</span></div>
+        <div class="bar" style="height:12px"><span style="width:${totPct}%;background:${totPct>=100?'var(--success)':'var(--primary)'}"></span></div>
+        <p style="margin:6px 0 0;font-weight:700;color:${totPct>=100?'var(--success)':'var(--muted)'}">${totPct}%${totPct>=100?" — banco batido! 🎉":""}</p>
+      </div>` : ""}
+    </div>` : `<div class="empty mt12"><div class="big">🎯</div><h3>Defina suas metas de tempo</h3><p>Preencha os campos acima para acompanhar o progresso.</p></div>`}
+
+    <div class="section-title">Horas nos últimos 7 dias</div>
+    <div class="card">
+      ${totalMin>0 ? `<div class="chart">${seven.map(d=>`<div class="col"><div class="cval">${d.min?(Math.round(d.min/60*10)/10)+"h":""}</div>
+        <div class="stick" style="height:${d.min?Math.max(4,Math.round(d.min/maxDay*100)):1}%;background:linear-gradient(180deg,var(--info),var(--primary))"></div>
+        <div class="clabel">${d.label}</div></div>`).join("")}</div>`
+        : `<p class="li-meta" style="margin:0">Registre questões com o campo <b>Tempo (min)</b> preenchido para ver o gráfico.</p>`}
+    </div>
+
+    <div class="section-title">Horas por matéria</div>
+    <div class="card">
+      ${timeRows.length ? timeRows.map(r=>`<div style="margin:10px 0">
+        <div class="row between" style="margin-bottom:6px"><span style="font-weight:600;font-size:14px">${r.name}</span>
+        <span class="li-meta" style="margin:0;font-weight:700;color:var(--text)">${fmtMin(r.min)}</span></div>
+        <div class="bar"><span style="width:${Math.max(3,Math.round(r.min/maxMin*100))}%;background:var(--info)"></span></div>
+      </div>`).join("") : `<p class="li-meta" style="margin:0">Preencha o campo <b>Tempo (min)</b> ao registrar questões para acompanhar suas horas por matéria.</p>`}
+    </div>`;
+}
+
+/* ---- Metas ---- */
+function viewMetas() {
+  const week = state.entries.filter(x=>isThisWeek(x.date));
+  const done = week.reduce((s,x)=>s+(+x.total),0);
+  const goal = +state.weeklyGoal||0;
+  const pct = goal>0 ? Math.min(100, Math.round(done/goal*100)) : 0;
+  return `<h1 class="page">Metas</h1><p class="sub">Defina seu alvo semanal de questões. As metas de tempo ficam na aba Horas.</p>
+    <div class="card">
+      <label class="field">Meta de questões por semana</label>
+      <div class="row" style="gap:10px">
+        <input class="input" type="number" inputmode="numeric" id="m_goal" min="0" value="${goal||""}" placeholder="Ex.: 300">
+        <button class="btn btn-primary" onclick="saveGoal()">Salvar</button>
+      </div>
+    </div>
+    ${goal>0 ? `<div class="card mt12">
+      <div class="row between" style="margin-bottom:8px"><b>Progresso da semana</b><span class="muted">${done} / ${goal}</span></div>
+      <div class="bar" style="height:12px"><span style="width:${pct}%;background:${pct>=100?'var(--success)':'var(--primary)'}"></span></div>
+      <p class="${pct>=100?'':'muted'}" style="margin:10px 0 0;font-weight:700;color:${pct>=100?'var(--success)':'var(--muted)'}">${pct}%${pct>=100?" — meta batida! 🎉":""}</p>
+    </div>` : `<div class="empty mt12"><div class="big">🎯</div><h3>Sem meta definida</h3><p>Defina um valor acima para acompanhar seu progresso.</p></div>`}
+
+    <div class="section-title">Backup e dados</div>
+    <div class="card">
+      <p class="li-meta" style="margin-top:0">Seus dados ficam neste dispositivo. Faça backup de vez em quando para não perder nada.</p>
+      <button class="btn btn-primary btn-block" onclick="downloadJSON()">⬇️ Baixar backup (.json)</button>
+      <div class="mt12"></div>
+      <button class="btn btn-ghost btn-block" onclick="copyJSON()">📋 Copiar backup (JSON)</button>
+
+      <label class="field mt16">Restaurar a partir de um backup</label>
+      <input type="file" id="impFile" accept=".json,application/json" class="hidden" onchange="onImportFile(event)">
+      <button class="btn btn-ghost btn-block" onclick="document.getElementById('impFile').click()">📁 Escolher arquivo .json</button>
+      <div class="mt12"></div>
+      <textarea id="impText" placeholder="…ou cole aqui o conteúdo do backup e toque em Importar"></textarea>
+      <div class="mt8"></div>
+      <button class="btn btn-ghost btn-block" onclick="importPaste()">Importar texto colado</button>
+    </div>
+
+    <div class="card danger-zone mt12">
+      <button class="btn btn-ghost btn-block" onclick="exportData()">Exportar resumo (texto)</button>
+      <div class="mt12"></div>
+      <button class="btn btn-danger btn-block" onclick="resetAll()">Apagar todos os dados</button>
+    </div>`;
+}
+
+/* --------------------------- ações / handlers ------------------------------ */
+function calcWrong() {
+  const t = +(document.getElementById("q_total")||{}).value || 0;
+  const c = +(document.getElementById("q_correct")||{}).value || 0;
+  const el = document.getElementById("q_wrong"); if (el) el.value = Math.max(0, t - c);
+}
+window.calcWrong = calcWrong;
+
+function wireSubjectArea() {
+  const subj = document.getElementById("q_subject");
+  if (subj) subj.addEventListener("change", () => {
+    const s = SUBJECTS.find(x=>x.v===subj.value); const area = document.getElementById("q_area");
+    if (s && area && !area.value) area.value = s.a;
+  });
+}
+
+async function addEntry() {
+  const g = id => (document.getElementById(id)||{}).value;
+  const total = parseInt(g("q_total"),10), correct = parseInt(g("q_correct"),10);
+  const subject = g("q_subject"), area = g("q_area") || (SUBJECTS.find(s=>s.v===subject)||{}).a;
+  if (!subject) return toast("Selecione a matéria");
+  if (!Number.isFinite(total) || total <= 0) return toast("Informe a quantidade de questões");
+  if (!Number.isFinite(correct) || correct < 0) return toast("Informe os acertos");
+  if (correct > total) return toast("Acertos não podem passar do total");
+  const data = { date: g("q_date")||todayISO(), area: area||"linguagens", subject,
+    topic: (g("q_topic")||"").trim(), source: g("q_source")||"", total, correct,
+    minutes: parseInt(g("q_min"),10)||0, difficulty: g("q_diff")||"" };
+  if (editEntryId) {
+    const i = state.entries.findIndex(e=>e.id===editEntryId);
+    if (i>=0) state.entries[i] = Object.assign({}, state.entries[i], data);
+    editEntryId = null; await persist(); render(); toast("Registro atualizado!");
+  } else {
+    state.entries.push(Object.assign({ id: uid() }, data)); await persist(); render(); toast("Questões registradas!"); maybeRemindBackup();
+  }
+}
+window.addEntry = addEntry;
+function editEntry(id){ editEntryId = id; render(); window.scrollTo({top:0,behavior:"smooth"}); }
+window.editEntry = editEntry;
+function cancelEdit(){ editEntryId = null; render(); }
+window.cancelEdit = cancelEdit;
+async function delEntry(id) {
+  const idx = state.entries.findIndex(e=>e.id===id); if (idx<0) return;
+  const removed = state.entries[idx];
+  state.entries.splice(idx,1); if (editEntryId===id) editEntryId=null;
+  await persist(); render();
+  toast("Registro excluído", "Desfazer", async () => {
+    state.entries.splice(Math.min(idx, state.entries.length), 0, removed); await persist(); render();
+  });
+}
+window.delEntry = delEntry;
+
+function calcEssayTotal() {
+  let s = 0; for (let i=1;i<=5;i++){ s += +((document.getElementById("r_c"+i)||{}).value||0); }
+  const el = document.getElementById("r_total_lbl"); if (el) el.textContent = s;
+}
+window.calcEssayTotal = calcEssayTotal;
+
+async function addEssay() {
+  const g = id => (document.getElementById(id)||{}).value;
+  const theme = (g("r_theme")||"").trim();
+  if (!theme) return toast("Informe o tema da redação");
+  const comps = {}; let total = 0; let any = false;
+  for (let i=1;i<=5;i++){ const v = g("r_c"+i); if (v!==""&&v!=null){ comps["c"+i]=Math.max(0,Math.min(200,parseInt(v,10)||0)); total+=comps["c"+i]; any=true; } else comps["c"+i]=null; }
+  const data = Object.assign({ date: g("r_date")||todayISO(), theme, total: any?total:null }, comps);
+  if (editEssayId) {
+    const i = state.essays.findIndex(e=>e.id===editEssayId);
+    if (i>=0) state.essays[i] = Object.assign({}, state.essays[i], data);
+    editEssayId = null; await persist(); render(); toast("Redação atualizada!");
+  } else {
+    state.essays.push(Object.assign({ id: uid() }, data)); await persist(); render(); toast("Redação registrada!"); maybeRemindBackup();
+  }
+}
+window.addEssay = addEssay;
+function editEssay(id){ editEssayId = id; render(); window.scrollTo({top:0,behavior:"smooth"}); }
+window.editEssay = editEssay;
+function cancelEditEssay(){ editEssayId = null; render(); }
+window.cancelEditEssay = cancelEditEssay;
+async function delEssay(id) {
+  const idx = state.essays.findIndex(e=>e.id===id); if (idx<0) return;
+  const removed = state.essays[idx];
+  state.essays.splice(idx,1); if (editEssayId===id) editEssayId=null;
+  await persist(); render();
+  toast("Redação excluída", "Desfazer", async () => {
+    state.essays.splice(Math.min(idx, state.essays.length), 0, removed); await persist(); render();
+  });
+}
+window.delEssay = delEssay;
+
+async function saveGoal() {
+  const q = parseInt((document.getElementById("m_goal")||{}).value,10);
+  state.weeklyGoal = Number.isFinite(q) && q>0 ? q : 0;
+  await persist(); toast("Meta salva!"); render();
+}
+window.saveGoal = saveGoal;
+
+async function saveHoras() {
+  const h = parseFloat((document.getElementById("h_week")||{}).value);
+  const tg = parseInt((document.getElementById("h_total")||{}).value,10);
+  state.weeklyHoursGoal = Number.isFinite(h) && h>0 ? Math.round(h*10)/10 : 0;
+  state.totalHoursGoal = Number.isFinite(tg) && tg>0 ? tg : 0;
+  await persist(); toast("Metas de tempo salvas!"); render();
+}
+window.saveHoras = saveHoras;
+
+async function resetAll() {
+  if (!confirm("Apagar TODOS os dados deste dispositivo? Dica: baixe um backup antes.")) return;
+  const snapshot = JSON.parse(JSON.stringify(state));
+  const theme = state.theme; state = defaults(); state.theme = theme;
+  await persist(); render();
+  toast("Tudo apagado", "Desfazer", async () => { state = snapshot; await persist(); applyTheme(); render(); });
+}
+window.resetAll = resetAll;
+
+/* ----------------------------- backup / restore ---------------------------- */
+function backupString(){ return JSON.stringify({ app:"enem-tracker", version:1, exportedAt:new Date().toISOString(),
+  entries: state.entries, essays: state.essays, weeklyGoal: state.weeklyGoal,
+  weeklyHoursGoal: state.weeklyHoursGoal, totalHoursGoal: state.totalHoursGoal }, null, 2); }
+
+function downloadJSON() {
+  const data = backupString();
+  state.backupBase = state.entries.length + state.essays.length; persist();
+  try {
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "enem-tracker-backup.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    toast("Backup .json gerado. Se não baixar, use Copiar.");
+  } catch(e) { fallbackCopy(data); }
+}
+window.downloadJSON = downloadJSON;
+function copyJSON(){ state.backupBase = state.entries.length + state.essays.length; persist(); fallbackCopy(backupString()); }
+window.copyJSON = copyJSON;
+
+function maybeRemindBackup(){
+  if (!hasStore) return;
+  const n = state.entries.length + state.essays.length;
+  if (n - (state.backupBase||0) >= 20){ state.backupBase = n; persist(); toast("Vários registros novos — que tal um backup?", "Baixar", downloadJSON); }
+}
+
+async function applyImport(text) {
+  let obj;
+  try { obj = JSON.parse(text); } catch(e) { return toast("Conteúdo inválido (não é JSON)"); }
+  if (!obj || typeof obj !== "object" || !Array.isArray(obj.entries)) return toast("Backup não reconhecido");
+  if (!confirm("Restaurar este backup vai SUBSTITUIR os dados atuais. Continuar?")) return;
+  state = Object.assign(defaults(), {
+    entries: Array.isArray(obj.entries) ? obj.entries.map(x=>Object.assign({id:uid()}, x)) : [],
+    essays:  Array.isArray(obj.essays)  ? obj.essays.map(x=>Object.assign({id:uid()}, x))  : [],
+    weeklyGoal: +obj.weeklyGoal || 0,
+    weeklyHoursGoal: +obj.weeklyHoursGoal || 0,
+    totalHoursGoal: +obj.totalHoursGoal || 0,
+    theme: state.theme,
+  });
+  state.backupBase = state.entries.length + state.essays.length;
+  await persist(); toast("Backup restaurado!"); render();
+}
+function onImportFile(ev) {
+  const f = ev.target.files && ev.target.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = () => applyImport(String(r.result)); r.onerror = () => toast("Não consegui ler o arquivo"); r.readAsText(f);
+}
+window.onImportFile = onImportFile;
+function importPaste() {
+  const t = (document.getElementById("impText")||{}).value || "";
+  if (!t.trim()) return toast("Cole o conteúdo do backup primeiro");
+  applyImport(t.trim());
+}
+window.importPaste = importPaste;
+
+function exportData() {
+  const lines = ["ENEM Tracker — resumo", "Gerado em " + new Date().toLocaleString("pt-BR"), "", "QUESTÕES:"];
+  state.entries.forEach(e=>lines.push(`${fmtBR(e.date)} | ${SUBJ_NAME[e.subject]||e.subject} | ${e.correct}/${e.total} (${taxa(e.correct,e.total)}%) | ${fmtMin(e.minutes)}${e.source?" | "+(SOURCE_NAME[e.source]||e.source):""}${e.topic?" | "+e.topic:""}`));
+  lines.push("", "REDAÇÕES:");
+  state.essays.forEach(e=>lines.push(`${fmtBR(e.date)} | ${e.theme} | total ${e.total??"-"} | C ${[1,2,3,4,5].map(i=>e["c"+i]??"-").join("/")}`));
+  const text = lines.join("\n");
+  if (navigator.share) navigator.share({ title: "ENEM Tracker", text }).catch(()=>fallbackCopy(text));
+  else fallbackCopy(text);
+}
+window.exportData = exportData;
+
+function fallbackCopy(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(()=>toast("Copiado para a área de transferência")).catch(()=>showText(text));
+  else showText(text);
+}
+function showText(text){ try { window.prompt("Copie o conteúdo abaixo:", text); } catch(e) { alert(text); } }
+
+/* --------------------------- dados de exemplo ------------------------------ */
+async function seedDemo() {
+  const base = ["matematica","biologia","historia","portugues","fisica","geografia","quimica","ingles"];
+  const rate = { matematica:.49, biologia:.81, historia:.7, portugues:.74, fisica:.55, geografia:.68, quimica:.58, ingles:.77 };
+  const srcs = ["enem","simulado","apostila","plataforma","proprias"];
+  const entries = [];
+  for (let d=20; d>=0; d--) {
+    if (Math.random() > 0.7) continue;
+    const dt = new Date(); dt.setDate(dt.getDate()-d);
+    const iso = new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    const n = 1 + Math.floor(Math.random()*2);
+    for (let i=0;i<n;i++){ const subj = base[Math.floor(Math.random()*base.length)];
+      const total = 8 + Math.floor(Math.random()*16);
+      const r = Math.max(.2, Math.min(.97, (rate[subj]||.65) + (Math.random()-.5)*.18));
+      entries.push({ id: uid(), date: iso, area:(SUBJECTS.find(s=>s.v===subj)||{}).a||"linguagens", subject: subj,
+        topic:"", source: srcs[Math.floor(Math.random()*srcs.length)], total, correct: Math.round(total*r),
+        minutes: 15+Math.floor(Math.random()*60), difficulty:"" }); }
+  }
+  const essays = [["Inclusão digital no Brasil",160,170,120,150,140],["Evasão escolar",150,160,140,160,130],["Saúde mental dos jovens",170,180,150,170,160]]
+    .map((e,i)=>{ const dt=new Date(); dt.setDate(dt.getDate()-i*6-2);
+      return { id: uid(), date:new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,10), theme:e[0],
+        c1:e[1],c2:e[2],c3:e[3],c4:e[4],c5:e[5], total:e[1]+e[2]+e[3]+e[4]+e[5] }; });
+  state.entries = entries.concat(state.entries);
+  state.essays = essays.concat(state.essays);
+  if (!state.weeklyGoal) state.weeklyGoal = 300;
+  if (!state.weeklyHoursGoal) state.weeklyHoursGoal = 18;
+  if (!state.totalHoursGoal) state.totalHoursGoal = 300;
+  state.backupBase = state.entries.length + state.essays.length;
+  await persist(); toast("Dados de exemplo carregados!"); render();
+}
+window.seedDemo = seedDemo;
+
+/* ---------------------------------- tema ----------------------------------- */
+function applyTheme() {
+  const dark = state.theme === "dark";
+  document.body.classList.toggle("dark", dark);
+  const b = document.getElementById("themeBtn"); if (b) b.textContent = dark ? "☀️" : "🌙";
+}
+async function toggleTheme() {
+  state.theme = document.body.classList.contains("dark") ? "light" : "dark";
+  applyTheme(); await persist();
+}
+
+/* ---------------------------------- init ----------------------------------- */
+document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
+document.getElementById("themeBtn").addEventListener("click", toggleTheme);
+
+(async function init() {
+  await loadData();
+  applyTheme();
+  if (!hasStore) toast("Aviso: armazenamento indisponível — os dados valem só nesta sessão.");
+  render();
+  setInterval(tickTimer, 1000); tickTimer();
+})();
+</script>
+</body>
+</html>
